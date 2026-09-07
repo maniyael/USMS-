@@ -51,6 +51,14 @@ export const PermissionsCatalog = {
   AUDIT_VIEW: 'audit.view',
   REPORT_VIEW: 'report.view',
   SYSTEM_CONFIG: 'system.config',
+  REFUND_VIEW: 'refund.view',
+  REFUND_REQUEST: 'refund.request',
+  REFUND_MANAGE: 'refund.manage',
+  EVALUATION_VIEW: 'evaluation.view',
+  EVALUATION_SUBMIT: 'evaluation.submit',
+  EVALUATION_CONFIG: 'evaluation.config',
+  EVALUATION_RESULT: 'evaluation.result',
+  EVALUATION_ANALYZE: 'evaluation.analyze',
 } as const;
 
 export type PermissionName = (typeof PermissionsCatalog)[keyof typeof PermissionsCatalog];

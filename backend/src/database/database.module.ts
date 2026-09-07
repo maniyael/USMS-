@@ -25,10 +25,14 @@ import { TimetableEntry } from '../modules/timetable/entities/timetable-entry.en
 import { StudentFee } from '../modules/finance/entities/student-fee.entity';
 import { Payment } from '../modules/finance/entities/payment.entity';
 import { Receipt } from '../modules/finance/entities/receipt.entity';
+import { Refund } from '../modules/finance/entities/refund.entity';
 import { StudentDocument } from '../modules/documents/entities/student-document.entity';
 import { Notification } from '../modules/notifications/entities/notification.entity';
 import { Announcement } from '../modules/notifications/entities/announcement.entity';
 import { AuditLog } from '../modules/audit/entities/audit-log.entity';
+import { EvaluationCriterion } from '../modules/evaluations/entities/evaluation-criterion.entity';
+import { EvaluationPeriod } from '../modules/evaluations/entities/evaluation-period.entity';
+import { CourseEvaluation } from '../modules/evaluations/entities/course-evaluation.entity';
 
 @Module({
   imports: [
@@ -66,10 +70,14 @@ import { AuditLog } from '../modules/audit/entities/audit-log.entity';
           StudentFee,
           Payment,
           Receipt,
+          Refund,
           StudentDocument,
           Notification,
           Announcement,
           AuditLog,
+          EvaluationCriterion,
+          EvaluationPeriod,
+          CourseEvaluation,
         ],
         synchronize: false,
         migrationsRun: false,

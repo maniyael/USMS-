@@ -19,7 +19,7 @@ const ASSESSMENT_TYPES = ['assignment', 'quiz', 'test', 'midterm', 'final_examin
 interface GradeEntry {
   id: number;
   studentId: number;
-  student?: { studentNumber: string; firstName: string; lastName: string };
+  student?: { studentId: string; firstName: string; lastName: string };
   score: string | null;
   grade: string | null;
   status: string;
@@ -28,7 +28,7 @@ interface GradeEntry {
 interface EntriesResponse {
   assessment: Assessment;
   grades: GradeEntry[];
-  enrolled: Array<{ studentId: number; student?: { studentNumber: string; firstName: string; lastName: string } }>;
+  enrolled: Array<{ studentId: number; student?: { studentId: string; firstName: string; lastName: string } }>;
 }
 
 export default function Grades() {
@@ -189,7 +189,7 @@ export default function Grades() {
               const isLocked = (g?.status === 'validated' || g?.status === 'corrected') && !canCorrect;
               return (
                 <tr key={en.studentId}>
-                  <td>{en.student ? `${en.student.studentNumber} - ${en.student.lastName}, ${en.student.firstName}` : `Student #${en.studentId}`}</td>
+                  <td>{en.student ? `${en.student.studentId} - ${en.student.lastName}, ${en.student.firstName}` : `Student #${en.studentId}`}</td>
                   <td>
                     {isLocked ? (
                       g?.score ?? '—'
@@ -206,7 +206,7 @@ export default function Grades() {
                     )}
                   </td>
                   <td>{g?.grade ?? '—'}</td>
-                  <td><span className={`badge badge-${g?.status ?? 'none'}`}>{g?.status ?? 'not entered'}</span></td>
+                  <td><span className={`badge badge-${g?.status ?? 'plain'}`}>{g?.status ?? 'not entered'}</span></td>
                   <td>
                     {g && canCorrect && (
                       <Button

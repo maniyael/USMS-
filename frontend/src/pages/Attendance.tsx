@@ -32,7 +32,7 @@ export default function Attendance() {
   const [date, setDate] = useState(todayIso());
   const [entries, setEntries] = useState<AttendanceEntry[] | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[] | null>(null);
-  const [stats, setStats] = useState<{ present: number; late: number; absent: number; percentage: number } | null>(null);
+  const [stats, setStats] = useState<{ total: number; present: number; late: number; absent: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,10 +50,10 @@ export default function Attendance() {
         .filter((r) => r.enrollmentStatus !== 'completed')
         .map((r) => {
           const prior = existing.find((x) => x.studentId === r.studentId);
-          const s = r.student as { studentNumber: string; firstName: string; lastName: string } | undefined;
+          const s = r.student as { studentId: string; firstName: string; lastName: string } | undefined;
           return {
             studentId: r.studentId,
-            studentName: s ? `${s.studentNumber} - ${s.lastName}, ${s.firstName}` : `Student #${r.studentId}`,
+            studentName: s ? `${s.studentId} - ${s.lastName}, ${s.firstName}` : `Student #${r.studentId}`,
             status: prior?.status ?? 'present',
           };
         });
@@ -67,7 +67,7 @@ export default function Attendance() {
     if (!courseId) return;
     http.get<AttendanceRecord[]>(`/attendance/course/${courseId}`).then(setRecords).catch(() => setRecords([]));
     http
-      .get<{ present: number; late: number; absent: number; percentage: number }>(`/attendance/course/${courseId}/stats`)
+      .get<{ total: number; present: number; late: number; absent: number }>(`/attendance/course/${courseId}/stats`)
       .then(setStats)
       .catch(() => setStats(null));
   }, [courseId]);
@@ -125,7 +125,7 @@ export default function Attendance() {
             <span className="badge badge-present">present {stats.present}</span>
             <span className="badge badge-late">late {stats.late}</span>
             <span className="badge badge-absent">absent {stats.absent}</span>
-            <b>Rate: {formatPercent(stats.percentage)}</b>
+            <b>Rate: {formatPercent(stats.total ? (stats.present + stats.late) / stats.total : 0)}</b>
           </div>
         )}
       </Card>

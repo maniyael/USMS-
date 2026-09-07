@@ -6,6 +6,7 @@ import {
   Card,
   dateOnly,
   formatPercent,
+  initials,
   Loading,
   money,
   StatCard,
@@ -23,6 +24,11 @@ import type {
   StudentDetail,
 } from '../types';
 
+interface StudentProfileResponse {
+  student: StudentPayload;
+  summary: StudentDetail['summary'];
+}
+
 interface StudentPayload extends Omit<StudentDetail, 'dateOfBirth' | 'academicStatus'> {
   dateOfBirth?: string;
   academicStatus?: string;
@@ -32,7 +38,12 @@ interface StudentPayload extends Omit<StudentDetail, 'dateOfBirth' | 'academicSt
   level?: { id: number; name: string };
   cohort?: { id: number; code: string };
   user?: { id: number; username: string };
-  summary?: { averageGpa?: number; attendanceRate?: number; creditsEarned?: number; totalCredits?: number };
+  summary?: {
+    semesterGpa?: number | null;
+    cumulativeGpa?: number | null;
+    attendancePercentage?: number | null;
+    creditsEarned?: number;
+  };
 }
 
 const TABS = ['Profile', 'Courses', 'Grades', 'Attendance', 'Fees', 'Documents'] as const;
@@ -53,20 +64,23 @@ export default function StudentDetail() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [fees, setFees] = useState<Fee[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [balance, setBalance] = useState<{ outstandingBalance: number } | null>(null);
+  const [balance, setBalance] = useState<{ balance: string } | null>(null);
   const [statement, setStatement] = useState<StatementLine[]>([]);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
 
   useEffect(() => {
     if (!sid) return;
-    http.get<StudentPayload>(`/students/${sid}`).then(setStudent).catch(() => setStudent(null));
+    http
+      .get<StudentProfileResponse>(`/students/${sid}`)
+      .then((r) => setStudent({ ...r.student, summary: r.summary }))
+      .catch(() => setStudent(null));
     const enPath = selfMode ? '/enrollment/my' : `/enrollment?studentId=${sid}`;
     http.get<Enrollment[]>(enPath).then(setEnrollments).catch(() => setEnrollments([]));
     http.get<GradeRecord[]>(`/grades/student/${sid}`).then(setGrades).catch(() => setGrades([]));
     http.get<AttendanceRecord[]>(`/attendance/student/${sid}`).then(setAttendance).catch(() => setAttendance([]));
     http.get<Fee[]>(`/finance/fees?studentId=${sid}`).then(setFees).catch(() => setFees([]));
     http.get<Payment[]>(`/finance/payments?studentId=${sid}`).then(setPayments).catch(() => setPayments([]));
-    http.get<{ outstandingBalance: number }>(`/finance/balance/student/${sid}`).then(setBalance).catch(() => setBalance(null));
+    http.get<{ balance: string }>(`/finance/balance/student/${sid}`).then(setBalance).catch(() => setBalance(null));
     http.get<StatementLine[]>(`/finance/statement/student/${sid}`).then(setStatement).catch(() => setStatement([]));
     http.get<DocumentRecord[]>(`/documents?studentId=${sid}`).then(setDocuments).catch(() => setDocuments([]));
   }, [sid, selfMode]);
@@ -74,25 +88,46 @@ export default function StudentDetail() {
   if (!sid) return <Loading />;
 
   return (
-    <div className="stack">
-      <div className="row-between">
-        <div>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => navigate(-1)}>
-            &larr; Back
-          </button>
-          <h2>
-            {student ? `${student.lastName}, ${student.firstName}` : 'Student'} — {student?.studentNumber ?? ''}
-          </h2>
-          {student && (
-            <p className="muted">
-              {student.program?.name} · {student.level?.name} · {student.cohort?.code}
-            </p>
-          )}
-        </div>
-        <span className={`badge badge-${student?.academicStatus ?? 'active'}`}>
-          {student?.academicStatus ?? 'loading'}
-        </span>
+    <div className="stack" style={{ marginTop: -12 }}>
+      <div className="row-between" style={{ marginBottom: 10 }}>
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => navigate(-1)}>
+          &larr; Back
+        </button>
       </div>
+
+      {student && (
+        <section className="profile-hero">
+          <div className="profile-hero-inner">
+            <div className="profile-avatar">{initials(student.firstName, student.lastName)}</div>
+            <div className="profile-id-meta">
+              <div className="profile-id-line">{student.studentId}</div>
+              <h2 className="profile-name">{student.firstName} {student.lastName}</h2>
+              <div className="profile-tags">
+                {student.program ? <span className={`badge ${student.academicStatus === 'active' ? 'badge-active' : 'badge-inactive'}`}>{student.academicStatus ?? 'active'}</span> : null}
+                {student.program?.name && <span className="profile-tag">{student.program.name}</span>}
+                {student.level?.name && <span className="profile-tag">{student.level.name}</span>}
+                {student.cohort?.code && <span className="profile-tag">Cohort {student.cohort.code}</span>}
+              </div>
+            </div>
+            <div className="hero-row hero-row-right">
+              <div className="hero-chip">
+                <span className="hc-label">Cumulative GPA</span>
+                <span className="hc-value">{student.summary?.cumulativeGpa?.toFixed(2) ?? '—'}</span>
+              </div>
+              <div className="hero-chip">
+                <span className="hc-label">Attendance</span>
+                <span className="hc-value">
+                  {student.summary?.attendancePercentage != null ? `${student.summary.attendancePercentage.toFixed(1)}%` : '—'}
+                </span>
+              </div>
+              <div className="hero-chip">
+                <span className="hc-label">Outstanding fees</span>
+                <span className="hc-value">{balance ? money(balance.balance) : '—'}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <nav className="tabs">
         {TABS.map((t) => (
@@ -105,24 +140,29 @@ export default function StudentDetail() {
       {tab === 'Profile' && (
         <div className="stack">
           <div className="grid-3 auto">
-            <StatCard label="GPA" value={student?.summary?.averageGpa?.toFixed(2) ?? '—'} />
+            <StatCard label="Semester GPA" value={student?.summary?.semesterGpa?.toFixed(2) ?? '—'} icon="grades" />
             <StatCard
-              label="Attendance"
-              value={formatPercent(student?.summary?.attendanceRate ?? null)}
+              label="Attendance rate"
+              value={
+                student?.summary?.attendancePercentage != null
+                  ? formatPercent(student.summary.attendancePercentage / 100)
+                  : '—'
+              }
+              icon="attendance"
             />
-            <StatCard label="Fees outstanding" value={balance ? money(balance.outstandingBalance) : '—'} />
+            <StatCard label="Fees outstanding" value={balance ? money(balance.balance) : '—'} icon="finance" />
           </div>
           <Card title="Personal details">
             <div className="kv-grid">
-              <div><span>Student number</span><b>{student?.studentNumber}</b></div>
-              <div><span>Name</span><b>{student ? `${student.firstName} ${student.lastName}` : ''}</b></div>
-              <div><span>Gender</span><b>{student?.gender}</b></div>
-              <div><span>Date of birth</span><b>{dateOnly(student?.dateOfBirth ?? null)}</b></div>
-              <div><span>Phone</span><b>{student?.phone ?? '—'}</b></div>
-              <div><span>Address</span><b>{student?.address ?? '—'}</b></div>
-              <div><span>Faculty</span><b>{student?.faculty?.name}</b></div>
-              <div><span>Department</span><b>{student?.department?.name}</b></div>
-              <div><span>Login username</span><b>{student?.user?.username ?? '—'}</b></div>
+              <div className="kv-item"><span>Student number</span><b>{student?.studentId}</b></div>
+              <div className="kv-item"><span>Full name</span><b>{student ? `${student.firstName} ${student.lastName}` : ''}</b></div>
+              <div className="kv-item"><span>Gender</span><b>{student?.gender}</b></div>
+              <div className="kv-item"><span>Date of birth</span><b>{dateOnly(student?.dateOfBirth ?? null)}</b></div>
+              <div className="kv-item"><span>Phone</span><b>{student?.phone ?? '—'}</b></div>
+              <div className="kv-item"><span>Address</span><b>{student?.address ?? '—'}</b></div>
+              <div className="kv-item"><span>Faculty</span><b>{student?.faculty?.name}</b></div>
+              <div className="kv-item"><span>Department</span><b>{student?.department?.name}</b></div>
+              <div className="kv-item"><span>Programme</span><b>{student?.program?.name}</b></div>
             </div>
           </Card>
         </div>
@@ -138,7 +178,7 @@ export default function StudentDetail() {
                 <td>{en.course?.credits}</td>
                 <td><span className="badge badge-active">{en.enrollmentStatus}</span></td>
                 <td>{en.attemptNumber}</td>
-                <td>{dateOnly(en.enrolledAt)}</td>
+                <td>{dateOnly(en.createdAt)}</td>
               </tr>
             ))}
           </Table>
@@ -180,8 +220,8 @@ export default function StudentDetail() {
       {tab === 'Fees' && (
         <div className="stack">
           <div className="grid-3 auto">
-            <StatCard label="Outstanding balance" value={balance ? money(balance.outstandingBalance) : '—'} />
-            <StatCard label="Total fees" value={money(fees.reduce((s, f) => s + f.amount, 0))} />
+            <StatCard label="Outstanding balance" value={balance ? money(balance.balance) : '—'} />
+            <StatCard label="Total fees" value={money(fees.reduce((s, f) => s + Number(f.amount), 0))} />
             <StatCard label="Payments" value={payments.length} />
           </div>
           <Card title={`Fees (${fees.length})`}>
@@ -197,13 +237,12 @@ export default function StudentDetail() {
             </Table>
           </Card>
           <Card title={`Payments (${payments.length})`}>
-            <Table columns={['Reference', 'Receipt', 'Amount', 'Method', 'Date', 'Status']}>
+            <Table columns={['Reference', 'Amount', 'Method', 'Date', 'Status']}>
               {payments.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.reference}</td>
-                  <td>{p.receiptNumber ?? '—'}</td>
+                  <td>{p.paymentReference}</td>
                   <td>{money(p.amount)}</td>
-                  <td>{p.method}</td>
+                  <td>{p.paymentMethod}</td>
                   <td>{dateOnly(p.paymentDate)}</td>
                   <td>
                     <span className={`badge ${p.reversedAt ? 'badge-reversed' : 'badge-active'}`}>
@@ -220,7 +259,7 @@ export default function StudentDetail() {
                 <tr key={i}>
                   <td>{dateOnly(l.date)}</td>
                   <td>{l.type}</td>
-                  <td>{l.reference}</td>
+                  <td>{l.ref}</td>
                   <td>{l.description}</td>
                   <td>{money(l.amount)}</td>
                 </tr>
@@ -240,7 +279,7 @@ export default function StudentDetail() {
                 <tr key={d.id}>
                   <td>{d.documentNumber}</td>
                   <td>{d.documentType}</td>
-                  <td>{dateTime(d.issuedAt ?? null)}</td>
+                  <td>{dateTime(d.generatedAt ?? null)}</td>
                 </tr>
               ))}
             </Table>

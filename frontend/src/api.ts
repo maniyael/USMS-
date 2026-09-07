@@ -1,15 +1,33 @@
 const TOKEN_KEY = 'usms_token';
+const REMEMBER_KEY = 'usms_remember';
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  const local = localStorage.getItem(TOKEN_KEY);
+  if (local) return local;
+  const session = sessionStorage.getItem(TOKEN_KEY);
+  if (session) return session;
+  return null;
 }
 
-export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setToken(token: string, remember: boolean) {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  if (remember) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(REMEMBER_KEY, '1');
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(REMEMBER_KEY, '0');
+  }
+}
+
+export function getRemembered(): boolean {
+  return localStorage.getItem(REMEMBER_KEY) === '1';
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export class ApiError extends Error {

@@ -77,7 +77,7 @@ export default function StaffPage() {
           <Table columns={['Staff No', 'Name', 'Email', 'Department', 'Position', 'Lecturer']}>
             {rows.map((s) => (
               <tr key={s.id}>
-                <td>{s.staffNumber}</td>
+                <td>{s.staffId}</td>
                 <td>{s.lastName}, {s.firstName}</td>
                 <td>{s.email}</td>
                 <td>{s.department?.name}</td>

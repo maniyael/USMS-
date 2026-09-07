@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '../api';
 import { useAuth } from '../auth';
-import { Button, Field, FormError, Input } from '../components/ui';
+import { Button, Field, FormError, PasswordInput } from '../components/ui';
+import { Icon } from '../components/icons';
 
 export default function ChangePassword() {
   const { user, logout, refresh, token } = useAuth();
@@ -43,45 +44,65 @@ export default function ChangePassword() {
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={onSubmit}>
-        <div className="auth-logo">USMS</div>
-        <h1>Change Password</h1>
-        <p className="muted">
-          Welcome, <b>{user?.username}</b>. You must change your temporary password to continue.
-        </p>
-        <FormError text={error} />
-        <Field label="Current password" required>
-          <Input
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            required
-            autoFocus
-          />
-        </Field>
-        <Field label="New password" required>
-          <Input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-          />
-        </Field>
-        <Field label="Confirm new password" required>
-          <Input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            required
-          />
-        </Field>
-        <Button type="submit" disabled={busy}>
-          {busy ? 'Saving...' : 'Change password'}
-        </Button>
-        <button type="button" className="btn btn-ghost" onClick={logout}>
-          Sign out
-        </button>
-      </form>
+      <div className="auth-inner">
+        <div className="auth-brand">
+          <div className="emblem">
+            <Icon name="graduationCap" />
+          </div>
+          <div>
+            <div className="auth-brand-name">USMS</div>
+            <div className="auth-brand-sub">University Student Management System</div>
+          </div>
+        </div>
+
+        <form className="auth-card" onSubmit={onSubmit}>
+          <div>
+            <div className="auth-accent" />
+            <h1>Set a new password</h1>
+            <p className="auth-sub">
+              Welcome, <b>{user?.username}</b>. Set your permanent password to continue.
+            </p>
+          </div>
+
+          <FormError text={error} />
+
+          <Field label="Current password" required>
+            <PasswordInput
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="Temporary password"
+              required
+              autoFocus
+            />
+          </Field>
+          <Field label="New password" required hint="At least 8 characters.">
+            <PasswordInput
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Minimum 8 characters"
+              required
+            />
+          </Field>
+          <Field label="Confirm new password" required>
+            <PasswordInput
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              autoComplete="new-password"
+              placeholder="Re-enter your password"
+              required
+            />
+          </Field>
+
+          <Button type="submit" disabled={busy} className="btn-gold">
+            {busy ? 'Saving...' : 'Change password'}
+          </Button>
+          <button type="button" className="btn btn-ghost" onClick={logout}>
+            <Icon name="logout" /> Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

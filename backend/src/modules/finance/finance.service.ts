@@ -4,10 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { StudentFee, FeeType } from './entities/student-fee.entity';
 import { Payment, PaymentMethod } from './entities/payment.entity';
 import { Receipt } from './entities/receipt.entity';
+import {
+  Refund,
+  RefundStatus,
+  generateRefundReference,
+} from './entities/refund.entity';
 import { Student } from '../students/entities/student.entity';
 
 export interface CreateFeeDto {
@@ -34,6 +39,12 @@ export interface RecordPaymentDto {
   amount: number;
   paymentDate: string;
   paymentMethod: PaymentMethod;
+}
+
+export interface RequestRefundDto {
+  paymentId: number;
+  reason: string;
+  amount?: number;
 }
 
 export function generatePaymentReference(): string {
@@ -63,6 +74,8 @@ export class FinanceService {
     private readonly paymentRepo: Repository<Payment>,
     @InjectRepository(Receipt)
     private readonly receiptRepo: Repository<Receipt>,
+    @InjectRepository(Refund)
+    private readonly refundRepo: Repository<Refund>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
   ) {}
@@ -230,23 +243,170 @@ export class FinanceService {
     return qb.getMany();
   }
 
+  // ---- Refunds ----
+  private async refundedForPayment(paymentId: number, status?: RefundStatus[]) {
+    const qb = this.refundRepo
+      .createQueryBuilder('refund')
+      .where('refund.payment_id = :paymentId', { paymentId });
+    if (status && status.length) {
+      qb.andWhere('refund.status IN (:...status)', { status });
+    }
+    return qb.getMany();
+  }
+
+  async requestRefund(dto: RequestRefundDto, requestedBy: number) {
+    if (!dto.reason || !dto.reason.trim()) {
+      throw new BadRequestException('A refund reason is required');
+    }
+    const payment = await this.paymentRepo.findOneBy({ id: dto.paymentId });
+    if (!payment) {
+      throw new NotFoundException('Payment not found');
+    }
+    if (payment.status !== 'active') {
+      throw new BadRequestException('Only active payments can be refunded');
+    }
+    const open = await this.refundedForPayment(payment.id, [
+      RefundStatus.REQUESTED,
+      RefundStatus.UNDER_REVIEW,
+      RefundStatus.APPROVED,
+    ]);
+    if (open.length > 0) {
+      throw new BadRequestException('A refund request is already open for this payment');
+    }
+    const processed = await this.refundedForPayment(payment.id, [RefundStatus.PROCESSED]);
+    const alreadyRefunded = processed.reduce(
+      (sum, r) => sum + this.toNumber(r.amount),
+      0,
+    );
+    const amount = dto.amount !== undefined ? this.toNumber(dto.amount) : this.toNumber(payment.amount);
+    const maxAllowed = this.toNumber(payment.amount) - alreadyRefunded;
+    if (amount <= 0 || amount > maxAllowed) {
+      throw new BadRequestException(
+        `Refund amount must be between 0.01 and ${maxAllowed.toFixed(DOUBLE_PRECISION)} (remaining refundable on this payment)`,
+      );
+    }
+    const refund = this.refundRepo.create({
+      paymentId: payment.id,
+      studentId: payment.studentId,
+      amount: amount.toFixed(DOUBLE_PRECISION),
+      reason: dto.reason.trim(),
+      status: RefundStatus.REQUESTED,
+      refundReference: generateRefundReference(),
+      requestedById: requestedBy,
+      requestedAt: new Date(),
+    });
+    await this.refundRepo.save(refund);
+    refund.refundReference = generateRefundReference(refund.id);
+    return this.refundRepo.save(refund);
+  }
+
+  async listRefunds(filters: { studentId?: number; status?: RefundStatus }) {
+    const qb = this.refundRepo
+      .createQueryBuilder('refund')
+      .leftJoinAndSelect('refund.payment', 'payment')
+      .leftJoinAndSelect('refund.student', 'student')
+      .orderBy('refund.createdAt', 'DESC');
+    if (filters.studentId !== undefined) {
+      qb.andWhere('refund.student_id = :studentId', { studentId: filters.studentId });
+    }
+    if (filters.status) {
+      qb.andWhere('refund.status = :status', { status: filters.status });
+    }
+    const refunds = await qb.getMany();
+    return {
+      refunds,
+      counts: {
+        requested: refunds.filter((r) => r.status === RefundStatus.REQUESTED).length,
+        underReview: refunds.filter((r) => r.status === RefundStatus.UNDER_REVIEW).length,
+        approved: refunds.filter((r) => r.status === RefundStatus.APPROVED).length,
+        processed: refunds.filter((r) => r.status === RefundStatus.PROCESSED).length,
+        rejected: refunds.filter((r) => r.status === RefundStatus.REJECTED).length,
+        cancelled: refunds.filter((r) => r.status === RefundStatus.CANCELLED).length,
+      },
+    };
+  }
+
+  async getRefund(id: number) {
+    const refund = await this.refundRepo.findOne({
+      where: { id },
+      relations: { payment: { fee: true } },
+    });
+    if (!refund) {
+      throw new NotFoundException('Refund not found');
+    }
+    return refund;
+  }
+
+  async reviewRefund(id: number, decision: 'under_review' | 'approved' | 'rejected', note: string, reviewerId: number) {
+    const refund = await this.getRefund(id);
+    const transitions: Record<string, string[]> = {
+      [RefundStatus.REQUESTED]: [RefundStatus.UNDER_REVIEW, RefundStatus.APPROVED, RefundStatus.REJECTED],
+      [RefundStatus.UNDER_REVIEW]: [RefundStatus.APPROVED, RefundStatus.REJECTED],
+    };
+    if (!(transitions[refund.status] ?? []).includes(decision)) {
+      throw new BadRequestException(
+        `Cannot move a refund from "${refund.status}" to "${decision}"`,
+      );
+    }
+    refund.status = decision as RefundStatus;
+    refund.reviewedById = reviewerId;
+    refund.reviewedAt = new Date();
+    refund.reviewNote = note?.trim() || null;
+    return this.refundRepo.save(refund);
+  }
+
+  async processRefund(id: number, note: string, processorId: number) {
+    const refund = await this.getRefund(id);
+    if (refund.status !== RefundStatus.APPROVED) {
+      throw new BadRequestException('Only approved refunds can be processed');
+    }
+    refund.status = RefundStatus.PROCESSED;
+    refund.processedById = processorId;
+    refund.processedAt = new Date();
+    refund.processedNote = note?.trim() || null;
+    return this.refundRepo.save(refund);
+  }
+
+  async cancelRefund(id: number, note: string, actorId: number) {
+    const refund = await this.getRefund(id);
+    if (![RefundStatus.REQUESTED, RefundStatus.UNDER_REVIEW, RefundStatus.APPROVED].includes(refund.status)) {
+      throw new BadRequestException(`A "${refund.status}" refund cannot be cancelled`);
+    }
+    refund.status = RefundStatus.CANCELLED;
+    refund.reviewedById = actorId;
+    refund.reviewedAt = new Date();
+    refund.reviewNote = note?.trim() || null;
+    return this.refundRepo.save(refund);
+  }
+
   // ---- Balances (computed, not stored) ----
+  private async netRetainedByFee(feeId: number) {
+    const payments = await this.paymentRepo.find({
+      where: { feeId, status: 'active' },
+    });
+    let paid = payments.reduce((sum, p) => sum + this.toNumber(p.amount), 0);
+    if (payments.length > 0) {
+      const refunds = await this.refundRepo.find({
+        where: { paymentId: In(payments.map((p) => p.id)), status: RefundStatus.PROCESSED },
+      });
+      paid -= refunds.reduce((sum, r) => sum + this.toNumber(r.amount), 0);
+    }
+    return { paid, payments };
+  }
+
   async balanceForFee(feeId: number) {
     const fee = await this.feeRepo.findOneBy({ id: feeId });
     if (!fee) {
       throw new NotFoundException('Fee not found');
     }
-    const paid = await this.paymentByFee(feeId);
+    const { paid } = await this.netRetainedByFee(feeId);
     const charged = this.toNumber(fee.amount);
-    const totalPaid = paid
-      .filter((p) => p.status === 'active')
-      .reduce((sum, p) => sum + this.toNumber(p.amount), 0);
     return {
       feeId,
       feeType: fee.feeType,
       charged: charged.toFixed(DOUBLE_PRECISION),
-      paid: totalPaid.toFixed(DOUBLE_PRECISION),
-      outstanding: (charged - totalPaid).toFixed(DOUBLE_PRECISION),
+      paid: paid.toFixed(DOUBLE_PRECISION),
+      outstanding: (charged - paid).toFixed(DOUBLE_PRECISION),
     };
   }
 
@@ -260,10 +420,8 @@ export class FinanceService {
     let paid = 0;
     for (const fee of fees) {
       charged += this.toNumber(fee.amount);
-      const payments = await this.paymentRepo.find({
-        where: { feeId: fee.id, status: 'active' },
-      });
-      paid += payments.reduce((sum, p) => sum + this.toNumber(p.amount), 0);
+      const net = await this.netRetainedByFee(fee.id);
+      paid += net.paid;
     }
     return {
       studentId,
@@ -277,6 +435,7 @@ export class FinanceService {
   async studentStatement(studentId: number) {
     const fees = await this.feeRepo.find({ where: { studentId }, order: { createdAt: 'ASC' } });
     const lines: Array<Record<string, unknown>> = [];
+    const paymentIds: number[] = [];
     for (const fee of fees) {
       lines.push({
         type: 'charge',
@@ -290,6 +449,7 @@ export class FinanceService {
         order: { paymentDate: 'ASC' },
       });
       for (const payment of payments) {
+        paymentIds.push(payment.id);
         lines.push({
           type: payment.status === 'reversed' ? 'reversal' : 'payment',
           ref: payment.paymentReference,
@@ -299,6 +459,23 @@ export class FinanceService {
               ? `-${this.toNumber(payment.amount).toFixed(DOUBLE_PRECISION)}`
               : this.toNumber(payment.amount).toFixed(DOUBLE_PRECISION),
           date: payment.paymentDate,
+        });
+      }
+    }
+    if (paymentIds.length > 0) {
+      const refunds = await this.refundRepo
+        .createQueryBuilder('refund')
+        .leftJoinAndSelect('refund.payment', 'payment')
+        .where('refund.payment_id IN (:...paymentIds)', { paymentIds })
+        .andWhere('refund.status = :status', { status: RefundStatus.PROCESSED })
+        .getMany();
+      for (const refund of refunds) {
+        lines.push({
+          type: 'refund',
+          ref: refund.refundReference,
+          description: `Refund — ${refund.reason} (payment ${refund.payment.paymentReference})`,
+          amount: `-${this.toNumber(refund.amount).toFixed(DOUBLE_PRECISION)}`,
+          date: refund.processedAt,
         });
       }
     }

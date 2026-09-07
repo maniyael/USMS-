@@ -36,8 +36,8 @@ interface GenericEntity {
   sortOrder?: number;
   programId?: number;
   program?: Program;
-  startYear?: string;
-  endYear?: string;
+  startYear?: number | string;
+  endYear?: number | string;
   startDate?: string;
   endDate?: string;
   startYearName?: string;
@@ -93,9 +93,25 @@ export default function Academics() {
     const body: Record<string, unknown> = { ...form };
     for (const [k, v] of Object.entries(body)) {
       if (v === '') delete body[k];
-      else if (['departmentId', 'programId', 'sortOrder', 'totalYears', 'totalSemesters'].includes(k)) {
+      else if (['departmentId', 'programId', 'levelId', 'facultyId', 'sortOrder'].includes(k)) {
         body[k] = Number(v);
       }
+    }
+    if (section === 'programs') {
+      delete body.totalYears;
+      delete body.totalSemesters;
+    }
+    if (section === 'years') {
+      body.name = `${body.startYear}-${body.endYear}`;
+      body.startYear = Number(body.startYear);
+      body.endYear = Number(body.endYear);
+    }
+    if (section === 'cohorts') {
+      const sy = years.find((y) => y.name === body.startYear);
+      const ey = years.find((y) => y.name === body.endYear);
+      body.startYear = sy ? Number(sy.startYear) : Number(body.startYear);
+      body.endYear = ey ? Number(ey.endYear) : Number(body.endYear);
+      body.code = '';
     }
     try {
       const path: Record<Section, string> = {
@@ -169,8 +185,8 @@ export default function Academics() {
         return (
           <>
             <td>{nameOf(row)}</td>
-            <td>{row.startDate}</td>
-            <td>{row.endDate}</td>
+            <td>{row.startYear}</td>
+            <td>{row.endYear}</td>
           </>
         );
       default:
@@ -275,11 +291,11 @@ export default function Academics() {
           )}
           {section === 'years' && (
             <>
-              <Field label="Start date" required>
-                <Input type="date" value={form.startDate ?? ''} onChange={(e) => setForm({ ...form, startDate: e.target.value })} required />
+              <Field label="Start year" required>
+                <Input type="number" min={2000} max={2100} value={form.startYear ?? ''} onChange={(e) => setForm({ ...form, startYear: e.target.value })} required />
               </Field>
-              <Field label="End date" required>
-                <Input type="date" value={form.endDate ?? ''} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required />
+              <Field label="End year" required>
+                <Input type="number" min={2000} max={2100} value={form.endYear ?? ''} onChange={(e) => setForm({ ...form, endYear: e.target.value })} required />
               </Field>
             </>
           )}

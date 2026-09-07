@@ -11,11 +11,12 @@ A full-stack student management system: **NestJS + TypeORM + PostgreSQL** backen
 - **Timetable** — sessions with class type, day, time, location, lecturer; delete entries.
 - **Attendance** — per-session attendance with congratulation (`present`/`late`/`absent`/`excused`/`medical`), course history, stats, student records.
 - **Grades** — assessments (weighted), grade entry, draft → submitted → validated workflow, corrections with history, GPA computation (weighted, per-course and per-semester) against a configurable grading scale.
-- **Finance** — student fees, payments with receipts, reversals, balances and statements.
+- **Finance** — student fees, payments with receipts, reversals, balances and statements, plus a full **refund workflow** (request → under review → approve/reject → process/refund) with lifecycle audit and refund lines on student statements.
+- **Evaluations** — lecturer & course evaluation criteria, evaluation periods (with open/close window), student submissions (self-scoped, duplicate-proof), per-lecturer results and aggregate overview.
 - **Documents** — generated student documents (admission letters, transcripts, etc.).
 - **Announcements / Notifications** — role-targeted posts (all / program / level / cohort); students get a per-student feed.
 - **Reports** — summary dashboard, enrollment-by-program, grade distribution.
-- **Admin** — role/permission management (52-permission catalog), audit log, user management.
+- **Admin** — role/permission management (60-permission catalog), audit log, user management.
 
 ## Tech stack
 
@@ -60,16 +61,19 @@ npm install
 # 2. build both workspaces
 npm run build
 
-# 3. start the API (port 3000, mounted under /api)
+# 3. create the database (once) and apply all migrations (core schema + refunds/evaluations)
+npm run migration:run --workspace backend
+
+# 4. start the API (port 3000, mounted under /api)
 npm run start:prod --workspace backend
 
-# 4. in another terminal, start the frontend dev server (port 5173, proxies /api -> :3000)
+# 5. in another terminal, start the frontend dev server (port 5173, proxies /api -> :3000)
 npm run dev --workspace frontend
 ```
 
 Then open http://localhost:5173.
 
-The backend seeds the database on first boot: super-admin role, the 52-permission catalog, five roles (super administrator, registrar, lecturer, finance officer, student), and a default admin account.
+The backend seeds the database on first boot: super-admin role, the 60-permission catalog, five roles (super administrator, registrar, lecturer, finance officer, student), and a default admin account.
 
 ### Convenience scripts (root)
 
@@ -79,13 +83,14 @@ npm run test         # backend unit tests
 npm run dev          # backend (watch) + frontend (watch)
 npm run start        # build, then run backend on :3000
 npm run lint         # eslint on backend
+npm run migration:run --workspace backend   # apply pending DB migrations (fresh DBs)
 ```
 
 ## Default accounts
 
 | Role     | Username | Password        | Notes                                    |
 |----------|----------|-----------------|------------------------------------------|
-| Admin    | `admin`  | `changeme2026@` | All 52 permissions                       |
+| Admin    | `admin`  | `changeme2026@` | All 60 permissions                       |
 | Student  | —        | `changeme2026@` | Initial password; username is student ID |
 
 Student/staff users are created through the app (Students / Staff pages), with their username derived from student ID (or staff number) and the university initial password.

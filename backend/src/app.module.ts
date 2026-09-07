@@ -20,6 +20,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { EvaluationsModule } from './modules/evaluations/evaluations.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -56,6 +57,7 @@ import { User } from './modules/users/entities/user.entity';
     DocumentsModule,
     NotificationsModule,
     ReportsModule,
+    EvaluationsModule,
     TypeOrmModule.forFeature([Permission, Role, User]),
   ],
   providers: [
