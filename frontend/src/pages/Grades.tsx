@@ -206,7 +206,7 @@ export default function Grades() {
                     )}
                   </td>
                   <td>{g?.grade ?? '—'}</td>
-                  <td><span className={`badge badge-${g?.status ?? 'none'}`}>{g?.status ?? 'not entered'}</span></td>
+                  <td><span className={`badge badge-${g?.status ?? 'plain'}`}>{g?.status ?? 'not entered'}</span></td>
                   <td>
                     {g && canCorrect && (
                       <Button

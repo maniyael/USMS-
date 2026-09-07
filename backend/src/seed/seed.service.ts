@@ -105,6 +105,9 @@ export class SeedService implements OnApplicationBootstrap {
           'academic.delete',
           'course.delete',
           'curriculum.delete',
+          'evaluation.view',
+          'evaluation.config',
+          'evaluation.analyze',
         ],
       },
       {
@@ -124,6 +127,7 @@ export class SeedService implements OnApplicationBootstrap {
           'document.generate',
           'report.view',
           'staff.view',
+          'evaluation.view',
         ],
       },
       {
@@ -141,6 +145,8 @@ export class SeedService implements OnApplicationBootstrap {
           'grade.view',
           'timetable.view',
           'announcement.manage',
+          'evaluation.view',
+          'evaluation.result',
         ],
       },
       {
@@ -156,6 +162,8 @@ export class SeedService implements OnApplicationBootstrap {
           'document.view',
           'document.generate',
           'report.view',
+          'refund.view',
+          'refund.manage',
         ],
       },
       {
@@ -172,6 +180,10 @@ export class SeedService implements OnApplicationBootstrap {
           'academic.view',
           'course.view',
           'announcement.view',
+          'refund.view',
+          'refund.request',
+          'evaluation.view',
+          'evaluation.submit',
         ],
       },
     ];

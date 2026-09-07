@@ -296,4 +296,94 @@ export interface DocumentRecord {
   studentId: number;
   generatedAt?: string;
   filePath?: string;
+  student?: StudentRow | null;
+}
+
+export interface CourseAssignment {
+  id: number;
+  courseId: number;
+  course?: Course;
+  staffId: number;
+  academicYear: string;
+  semester: number;
+}
+
+/* ---- Refunds ---- */
+export type RefundStatus =
+  | 'requested'
+  | 'under_review'
+  | 'approved'
+  | 'rejected'
+  | 'processed'
+  | 'cancelled';
+
+export interface Refund {
+  id: number;
+  paymentId: number;
+  studentId: number;
+  amount: number | string;
+  reason: string;
+  status: RefundStatus;
+  refundReference: string;
+  requestedById?: number;
+  requestedAt?: string;
+  reviewedById?: number;
+  reviewedAt?: string;
+  reviewNote?: string | null;
+  processedById?: number;
+  processedAt?: string;
+  processedNote?: string | null;
+  createdAt?: string;
+  payment?: Payment | null;
+  student?: { studentId: string; firstName: string; lastName: string } | null;
+}
+
+/* ---- Evaluations ---- */
+export interface EvaluationCriterion {
+  id: number;
+  name: string;
+  description?: string;
+  orderIndex: number;
+  active: boolean;
+}
+
+export interface EvaluationPeriod {
+  id: number;
+  name: string;
+  academicYear: string;
+  semester: number;
+  startsAt: string;
+  endsAt: string;
+  isOpen: boolean;
+  createdAt?: string;
+}
+
+export interface EvaluationTarget {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  lecturerId: number | null;
+  lecturerName: string;
+  alreadyEvaluated: boolean;
+}
+
+export interface EvaluationSubmission {
+  id: number;
+  periodId: number;
+  courseId: number;
+  lecturerId: number | null;
+  course?: { code: string; name: string };
+  overallRating: number;
+  writtenFeedback?: string | null;
+  submittedAt: string;
+  period?: { name: string; academicYear: string; semester: number };
+}
+
+export interface EvaluationResult {
+  courseId: number;
+  courseCode: string;
+  courseName: string;
+  responseCount: number;
+  overallRating: number;
+  perCriterion: Array<{ criterionId: number; name: string; mean: number }>;
 }
