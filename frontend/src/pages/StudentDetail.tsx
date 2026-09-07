@@ -85,7 +85,25 @@ export default function StudentDetail() {
     http.get<DocumentRecord[]>(`/documents?studentId=${sid}`).then(setDocuments).catch(() => setDocuments([]));
   }, [sid, selfMode]);
 
-  if (!sid) return <Loading />;
+  if (!sid) {
+    if (isMe && !user?.linkedStudentId) {
+      return (
+        <div className="stack" style={{ marginTop: -12 }}>
+          <div className="row-between" style={{ marginBottom: 10 }}>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => navigate(-1)}>
+              &larr; Back
+            </button>
+          </div>
+          <Card title={isRole('student') ? 'My Profile' : 'Student Profile'}>
+            <p className="muted">
+              No student record is linked to this account. Please contact the registrar to link your student profile.
+            </p>
+          </Card>
+        </div>
+      );
+    }
+    return <Loading />;
+  }
 
   return (
     <div className="stack" style={{ marginTop: -12 }}>
