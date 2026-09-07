@@ -1,0 +1,18 @@
+{
+  "name": "usms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "University Student Management System (USMS)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
+  }
+}
