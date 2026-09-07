@@ -17,7 +17,8 @@ import {
 import type { Announcement, Cohort, Level, Program } from '../types';
 
 export default function Announcements() {
-  const { can } = useAuth();
+  const { user, can } = useAuth();
+  const isManager = can('announcement.manage');
   const [rows, setRows] = useState<Announcement[] | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,27 +35,38 @@ export default function Announcements() {
   });
 
   const load = useCallback(() => {
+    if (user?.linkedStudentId && !isManager) {
+      http
+        .get<Announcement[]>(`/notifications/student/${user.linkedStudentId}`)
+        .then(setRows)
+        .catch(() => setRows([]));
+      return;
+    }
     http.get<Announcement[]>('/notifications/announcements').then(setRows).catch(() => setRows([]));
-  }, []);
+  }, [user?.linkedStudentId, isManager]);
 
   useEffect(() => {
     load();
-    http.get<Program[]>('/academics/programs').then(setPrograms).catch(() => {});
-    http.get<Level[]>('/academics/levels').then(setLevels).catch(() => {});
-    http.get<Cohort[]>('/academics/cohorts').then(setCohorts).catch(() => {});
-  }, [load]);
+    if (isManager) {
+      http.get<Program[]>('/academics/programs').then(setPrograms).catch(() => {});
+      http.get<Level[]>('/academics/levels').then(setLevels).catch(() => {});
+      http.get<Cohort[]>('/academics/cohorts').then(setCohorts).catch(() => {});
+    }
+  }, [load, isManager]);
 
   async function create(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    let targetId: number | undefined;
+    if (form.targetType === 'program') targetId = Number(form.programId) || undefined;
+    else if (form.targetType === 'level') targetId = Number(form.levelId) || undefined;
+    else if (form.targetType === 'cohort') targetId = Number(form.cohortId) || undefined;
     try {
       await http.post('/notifications/announcements', {
         title: form.title,
         body: form.body,
         targetType: form.targetType,
-        programId: form.programId ? Number(form.programId) : undefined,
-        levelId: form.levelId ? Number(form.levelId) : undefined,
-        cohortId: form.cohortId ? Number(form.cohortId) : undefined,
+        targetId,
       });
       setOpen(false);
       setForm({ title: '', body: '', targetType: 'all', programId: '', levelId: '', cohortId: '' });

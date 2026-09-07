@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, IsNull, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { Announcement, AnnouncementTargetType } from './entities/announcement.entity';
+import { Student } from '../students/entities/student.entity';
 
 export interface CreateAnnouncementDto {
   title: string;
@@ -21,6 +22,8 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Announcement)
     private readonly announcementRepo: Repository<Announcement>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
   ) {}
 
   async create(dto: CreateAnnouncementDto, createdById: number) {
@@ -88,6 +91,30 @@ export class NotificationsService {
     levelId?: number;
     cohortId?: number;
   }) {
+    const context = { ...studentContext };
+    if (context.facultyId === undefined || context.departmentId === undefined ||
+        context.programId === undefined || context.levelId === undefined ||
+        context.cohortId === undefined) {
+      const student = await this.studentRepo.findOneBy({ id: studentId });
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
+      if (context.facultyId === undefined && student.program?.department?.facultyId !== undefined) {
+        context.facultyId = student.program.department.facultyId;
+      }
+      if (context.departmentId === undefined && student.program?.departmentId !== undefined) {
+        context.departmentId = student.program.departmentId;
+      }
+      if (context.programId === undefined) {
+        context.programId = student.programId;
+      }
+      if (context.levelId === undefined) {
+        context.levelId = student.levelId;
+      }
+      if (context.cohortId === undefined) {
+        context.cohortId = student.cohortId;
+      }
+    }
     const now = new Date();
     const qb = this.announcementRepo
       .createQueryBuilder('a')
@@ -108,11 +135,11 @@ export class NotificationsService {
           program: AnnouncementTargetType.PROGRAM,
           level: AnnouncementTargetType.LEVEL,
           cohort: AnnouncementTargetType.COHORT,
-          facultyId: studentContext.facultyId ?? null,
-          departmentId: studentContext.departmentId ?? null,
-          programId: studentContext.programId ?? null,
-          levelId: studentContext.levelId ?? null,
-          cohortId: studentContext.cohortId ?? null,
+          facultyId: context.facultyId ?? null,
+          departmentId: context.departmentId ?? null,
+          programId: context.programId ?? null,
+          levelId: context.levelId ?? null,
+          cohortId: context.cohortId ?? null,
         },
       )
       .orderBy('a.publishedAt', 'DESC');

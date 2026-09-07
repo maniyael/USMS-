@@ -171,6 +171,7 @@ export class SeedService implements OnApplicationBootstrap {
           'document.view',
           'academic.view',
           'course.view',
+          'announcement.view',
         ],
       },
     ];
