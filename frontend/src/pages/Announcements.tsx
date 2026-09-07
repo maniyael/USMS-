@@ -65,7 +65,7 @@ export default function Announcements() {
       await http.post('/notifications/announcements', {
         title: form.title,
         body: form.body,
-        targetType: form.targetType,
+        targetType: form.targetType === 'all' ? 'university' : form.targetType,
         targetId,
       });
       setOpen(false);
@@ -93,11 +93,11 @@ export default function Announcements() {
               <tr key={a.id}>
                 <td>{a.title}</td>
                 <td>
-                  {a.targetType === 'all' ? (
+                  {a.targetType === 'university' || a.targetType === 'all' ? (
                     'All'
                   ) : (
                     <span className="badge">
-                      {a.programId ? `P${a.programId} ` : ''}{a.levelId ? `L${a.levelId} ` : ''}{a.cohortId ? `C${a.cohortId}` : ''}
+                      {a.targetType} #{a.targetId ?? ''}
                     </span>
                   )}
                 </td>

@@ -25,10 +25,10 @@ export interface NamedEntity {
 export interface Faculty extends NamedEntity {}
 export interface Department extends NamedEntity {}
 export interface Program extends NamedEntity {
-  departmentId: number;
-  facultyId: number;
-  totalYears: number;
-  totalSemesters: number;
+  departmentId?: number;
+  facultyId?: number;
+  totalYears?: number;
+  totalSemesters?: number;
 }
 export interface Level {
   id: number;
@@ -39,14 +39,14 @@ export interface Cohort {
   id: number;
   code: string;
   programId: number;
-  startYear: string;
-  endYear: string;
+  startYear: number | string;
+  endYear: number | string;
 }
 export interface AcademicYear {
   id: number;
   name: string;
-  startDate: string;
-  endDate: string;
+  startYear: number | string;
+  endYear: number | string;
 }
 
 export interface Course {
@@ -80,7 +80,7 @@ export interface Curriculum {
 
 export interface Staff {
   id: number;
-  staffNumber: string;
+  staffId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -94,7 +94,7 @@ export interface Staff {
 export interface Enrollment {
   id: number;
   studentId: number;
-  student?: { id: number; studentNumber: string; firstName: string; lastName: string };
+  student?: { id: number; studentId: string; firstName: string; lastName: string };
   courseId: number;
   course?: Course;
   attemptNumber: number;
@@ -102,7 +102,7 @@ export interface Enrollment {
   enrollmentStatus: string;
   academicYear: string;
   semester: number;
-  enrolledAt: string;
+  createdAt: string;
   grade?: string | null;
 }
 
@@ -112,10 +112,10 @@ export interface AttendanceRecord {
   course?: Course;
   date: string;
   studentId: number;
-  student?: { firstName: string; lastName: string; studentNumber: string };
+  student?: { firstName: string; lastName: string; studentId: string };
   status: 'present' | 'late' | 'absent';
   remarks?: string;
-  recordedBy: number;
+  recordedById?: number;
 }
 
 export interface Assessment {
@@ -179,7 +179,9 @@ export interface Fee {
   academicYear: string;
   semester: number;
   description: string;
-  amount: number;
+  amount: number | string;
+  feeType?: string;
+  student?: { studentId: string; firstName: string; lastName: string };
   createdAt: string;
 }
 
@@ -187,22 +189,22 @@ export interface Payment {
   id: number;
   studentId: number;
   feeId: number;
-  amount: number;
-  method: string;
-  reference: string;
+  amount: number | string;
+  paymentMethod: string;
+  paymentReference: string;
   paymentDate: string;
   reversedAt: string | null;
-  reversalReason?: string;
-  receiptNumber: string | null;
+  reversalNote?: string | null;
   status: string;
   student?: { studentId: string; firstName: string; lastName: string } | null;
+  fee?: Fee;
 }
 
 export interface StatementLine {
   type: 'fee' | 'payment' | 'reversal';
   date: string;
-  amount: number;
-  reference: string;
+  amount: number | string;
+  ref: string;
   description: string;
 }
 
@@ -211,9 +213,7 @@ export interface Announcement {
   title: string;
   body: string;
   targetType: string;
-  programId: number | null;
-  levelId: number | null;
-  cohortId: number | null;
+  targetId: number | null;
   publishedAt: string;
   expiresAt: string | null;
 }
@@ -247,7 +247,7 @@ export interface ReportsSummary {
 
 export interface StudentRow {
   id: number;
-  studentNumber: string;
+  studentId: string;
   firstName: string;
   lastName: string;
   gender: string;
@@ -258,9 +258,16 @@ export interface StudentRow {
   enrollmentDate?: string;
 }
 
+export interface StudentListResponse {
+  items: StudentRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export interface StudentDetail {
   id: number;
-  studentNumber: string;
+  studentId: string;
   firstName: string;
   lastName: string;
   gender: string;
@@ -274,7 +281,12 @@ export interface StudentDetail {
   level?: { id: number; name: string };
   cohort?: { id: number; code: string };
   user?: { id: number; username: string };
-  summary?: { averageGpa?: number; attendanceRate?: number; creditsEarned?: number; totalCredits?: number };
+  summary?: {
+    semesterGpa?: number | null;
+    cumulativeGpa?: number | null;
+    attendancePercentage?: number | null;
+    creditsEarned?: number;
+  };
 }
 
 export interface DocumentRecord {
@@ -282,6 +294,6 @@ export interface DocumentRecord {
   documentNumber: string;
   documentType: string;
   studentId: number;
-  issuedAt?: string;
+  generatedAt?: string;
   filePath?: string;
 }

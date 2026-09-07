@@ -14,7 +14,7 @@ import {
   dateOnly,
   money,
 } from '../components/ui';
-import type { Fee, Payment, StudentRow } from '../types';
+import type { Fee, Payment, StudentListResponse, StudentRow } from '../types';
 
 export default function Finance() {
   const { can } = useAuth();
@@ -39,7 +39,7 @@ export default function Finance() {
 
   useEffect(() => {
     load();
-    http.get<{ data: StudentRow[] }>('/students?limit=200').then((r) => setStudents(r.data)).catch(() => {});
+    http.get<StudentListResponse>('/students?limit=200').then((r) => setStudents(r.items)).catch(() => {});
   }, [load]);
 
   async function createFee(e: FormEvent) {
@@ -94,7 +94,7 @@ export default function Finance() {
 
   const studentName = (sid: number) => {
     const s = students.find((x) => x.id === sid);
-    return s ? `${s.studentNumber} — ${s.lastName}, ${s.firstName}` : `Student #${sid}`;
+    return s ? `${s.studentId} — ${s.lastName}, ${s.firstName}` : `Student #${sid}`;
   };
 
   return (
@@ -114,7 +114,7 @@ export default function Finance() {
           <Select value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="">All students</option>
             {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.studentNumber}</option>
+              <option key={s.id} value={s.id}>{s.studentId}</option>
             ))}
           </Select>
         </div>
@@ -140,14 +140,13 @@ export default function Finance() {
           ) : undefined
         }
       >
-        <Table columns={['Student', 'Reference', 'Receipt', 'Amount', 'Method', 'Date', 'Status', '']}>
+        <Table columns={['Student', 'Reference', 'Amount', 'Method', 'Date', 'Status', '']}>
           {payments.map((p) => (
             <tr key={p.id}>
               <td>{studentName(p.studentId)}</td>
-              <td>{p.reference}</td>
-              <td>{p.receiptNumber ?? '—'}</td>
+              <td>{p.paymentReference}</td>
               <td>{money(p.amount)}</td>
-              <td>{p.method}</td>
+              <td>{p.paymentMethod}</td>
               <td>{dateOnly(p.paymentDate)}</td>
               <td>
                 <span className={`badge ${p.reversedAt ? 'badge-reversed' : 'badge-active'}`}>
@@ -170,7 +169,7 @@ export default function Finance() {
             <Select value={feeForm.studentId} onChange={(e) => setFeeForm({ ...feeForm, studentId: e.target.value })} required>
               <option value="">Select student...</option>
               {students.map((s) => (
-                <option key={s.id} value={s.id}>{s.studentNumber} - {s.lastName}, {s.firstName}</option>
+                <option key={s.id} value={s.id}>{s.studentId} - {s.lastName}, {s.firstName}</option>
               ))}
             </Select>
           </Field>

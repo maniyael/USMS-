@@ -20,31 +20,14 @@ import type {
   Faculty,
   Level,
   Program,
+  StudentListResponse,
+  StudentRow,
 } from '../types';
-
-interface StudentRow {
-  id: number;
-  studentNumber: string;
-  firstName: string;
-  lastName: string;
-  gender: string;
-  academicStatus: string;
-  program?: { name: string };
-  level?: { name: string };
-  user?: { username: string };
-  enrollmentDate?: string;
-}
-interface StudentListResponse {
-  data: StudentRow[];
-  total: number;
-  page: number;
-  limit: number;
-}
 
 export function StudentLookup({ studentId, onStudent }: { studentId?: number; onStudent?: (id: number) => void }) {
   const [rows, setRows] = useState<StudentRow[]>([]);
   useEffect(() => {
-    http.get<StudentListResponse>('/students?limit=200').then((r) => setRows(r.data)).catch(() => setRows([]));
+    http.get<StudentListResponse>('/students?limit=200').then((r) => setRows(r.items)).catch(() => setRows([]));
   }, [studentId]);
   return (
     <Select
@@ -54,7 +37,7 @@ export function StudentLookup({ studentId, onStudent }: { studentId?: number; on
       <option value="">Select student...</option>
       {rows.map((s) => (
         <option key={s.id} value={s.id}>
-          {s.studentNumber} - {s.lastName}, {s.firstName}
+          {s.studentId} - {s.lastName}, {s.firstName}
         </option>
       ))}
     </Select>
@@ -158,9 +141,9 @@ export default function Students() {
           <Loading />
         ) : (
           <Table columns={['Student Number', 'Name', 'Program', 'Level', 'Status', '']}>
-            {data.data.map((s) => (
+            {data.items.map((s) => (
               <tr key={s.id}>
-                <td>{s.studentNumber}</td>
+                <td>{s.studentId}</td>
                 <td>
                   {s.lastName}, {s.firstName}
                 </td>

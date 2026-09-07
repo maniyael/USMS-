@@ -12,7 +12,7 @@ function StudentDashboard() {
   const [enrollments, setEnrollments] = useState<Enrollment[] | null>(null);
   const [grades, setGrades] = useState<GradeRecord[] | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [balance, setBalance] = useState<{ outstandingBalance: number } | null>(null);
+  const [balance, setBalance] = useState<{ balance: string } | null>(null);
 
   useEffect(() => {
     if (!sid) return;
@@ -23,7 +23,7 @@ function StudentDashboard() {
       .then(setAnnouncements)
       .catch(() => setAnnouncements([]));
     http
-      .get<{ outstandingBalance: number }>(`/finance/balance/student/${sid}`)
+      .get<{ balance: string }>(`/finance/balance/student/${sid}`)
       .then(setBalance)
       .catch(() => setBalance(null));
   }, [sid]);
@@ -61,7 +61,7 @@ function StudentDashboard() {
       </Card>
       <div className="grid-3 auto">
         <StatCard label="Weighted score" value={validated.length ? `${totalScore.toFixed(1)}%` : '—'} sub={`${validated.length} validated grades`} />
-        <StatCard label="Fees outstanding" value={balance ? money(balance.outstandingBalance) : '—'} />
+        <StatCard label="Fees outstanding" value={balance ? money(balance.balance) : '—'} />
         <StatCard label="Announcements" value={announcements.length} />
       </div>
       <Card title="Announcements">

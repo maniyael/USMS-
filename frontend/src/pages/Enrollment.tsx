@@ -13,10 +13,10 @@ import {
   Select,
   Table,
 } from '../components/ui';
-import type { Course, Enrollment, StudentRow } from '../types';
+import type { Course, Enrollment, StudentListResponse, StudentRow } from '../types';
 
 interface EnrollmentRow extends Omit<Enrollment, 'student'> {
-  student?: { id?: number; studentNumber: string; firstName: string; lastName: string };
+  student?: { id?: number; studentId: string; firstName: string; lastName: string };
 }
 
 export default function EnrollmentPage() {
@@ -50,7 +50,7 @@ export default function EnrollmentPage() {
   }, [load]);
 
   useEffect(() => {
-    http.get<{ data: StudentRow[] }>('/students?limit=200').then((r) => setStudents(r.data)).catch(() => {});
+    http.get<StudentListResponse>('/students?limit=200').then((r) => setStudents(r.items)).catch(() => {});
     http.get<Course[]>('/courses').then(setCourses).catch(() => {});
   }, []);
 
@@ -119,7 +119,7 @@ export default function EnrollmentPage() {
           <Select value={filters.studentId} onChange={(e) => setFilters({ ...filters, studentId: e.target.value })}>
             <option value="">All students</option>
             {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.studentNumber}</option>
+              <option key={s.id} value={s.id}>{s.studentId}</option>
             ))}
           </Select>
           <Select value={filters.courseId} onChange={(e) => setFilters({ ...filters, courseId: e.target.value })}>
@@ -141,11 +141,11 @@ export default function EnrollmentPage() {
           <Table columns={['Student', 'Course', 'Attempt', 'Status', 'Enrolled']}>
             {rows.map((en) => (
               <tr key={en.id}>
-                <td>{en.student ? `${en.student.studentNumber} - ${en.student.lastName}, ${en.student.firstName}` : `Student #${en.studentId}`}</td>
+                <td>{en.student ? `${en.student.studentId} - ${en.student.lastName}, ${en.student.firstName}` : `Student #${en.studentId}`}</td>
                 <td>{en.course ? `${en.course.code} - ${en.course.name}` : `Course #${en.courseId}`}</td>
                 <td>{en.attemptNumber}</td>
                 <td><span className={`badge badge-${en.enrollmentStatus === 'completed' ? 'completed' : 'active'}`}>{en.enrollmentStatus}</span></td>
-                <td>{new Date(en.enrolledAt).toLocaleDateString()}</td>
+                <td>{new Date(en.createdAt).toLocaleDateString()}</td>
               </tr>
             ))}
           </Table>
@@ -171,7 +171,7 @@ export default function EnrollmentPage() {
             {students.map((s) => (
               <label key={s.id} className="inline-check">
                 <input type="checkbox" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} />
-                {s.studentNumber} - {s.lastName}, {s.firstName}
+                {s.studentId} - {s.lastName}, {s.firstName}
               </label>
             ))}
           </div>
@@ -198,7 +198,7 @@ export default function EnrollmentPage() {
             <Select value={retakeForm.studentId} onChange={(e) => setRetakeForm({ ...retakeForm, studentId: e.target.value })} required>
               <option value="">Select student...</option>
               {students.map((s) => (
-                <option key={s.id} value={s.id}>{s.studentNumber}</option>
+                <option key={s.id} value={s.id}>{s.studentId}</option>
               ))}
             </Select>
           </Field>

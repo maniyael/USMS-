@@ -165,7 +165,7 @@ export function useModal() {
   return { open, close: () => setOpen(false), openModal: () => setOpen(true) };
 }
 
-export function money(n: number | null | undefined): string {
+export function money(n: number | string | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
   return `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
