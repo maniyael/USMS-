@@ -194,6 +194,8 @@ export interface Payment {
   reversedAt: string | null;
   reversalReason?: string;
   receiptNumber: string | null;
+  status: string;
+  student?: { studentId: string; firstName: string; lastName: string } | null;
 }
 
 export interface StatementLine {
@@ -216,15 +218,31 @@ export interface Announcement {
   expiresAt: string | null;
 }
 
-export interface DashboardStats {
+export interface AdminSummary {
   totalStudents: number;
   totalStaff: number;
   totalCourses: number;
   activeEnrollments: number;
-  feeBalance: number;
+  validatedGrades: number;
   attendanceRate: number;
-  averageGpa: number;
-  recentPayments: Array<{ id: number; studentNumber: string; name: string; amount: number; paymentDate: string }>;
+  feesOutstanding: number;
+  recentPayments: Array<{
+    id: number;
+    studentNumber: string;
+    name: string;
+    amount: number;
+    paymentDate: string;
+  }>;
+}
+
+export interface ReportsSummary {
+  totalStudents: number;
+  totalStaff: number;
+  totalCourses: number;
+  activeEnrollments: number;
+  validatedGrades: number;
+  attendance: { present: number; late: number; absent: number; rate: number | null };
+  fees: { charged: number; paid: number; outstanding: number; collectedRate: number | null };
 }
 
 export interface StudentRow {

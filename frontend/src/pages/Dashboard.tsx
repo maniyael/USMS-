@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { http } from '../api';
 import { useAuth } from '../auth';
 import { Card, formatPercent, Loading, money, StatCard, dateOnly } from '../components/ui';
-import type { Announcement, DashboardStats, Enrollment, GradeRecord } from '../types';
+import type { AdminSummary, Announcement, Enrollment, GradeRecord, Payment, ReportsSummary } from '../types';
 
 function StudentDashboard() {
   const { user } = useAuth();
@@ -98,9 +98,34 @@ function ButtonRow({ onClick, label }: { onClick: () => void; label: string }) {
 }
 
 function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<AdminSummary | null>(null);
   useEffect(() => {
-    http.get<DashboardStats>('/students/dashboard-stats').then(setStats).catch(() => setStats(null));
+    Promise.all([
+      http.get<ReportsSummary>('/reports/summary'),
+      http.get<Payment[]>('/finance/payments'),
+    ])
+      .then(([summary, payments]) => {
+        setStats({
+          totalStudents: summary.totalStudents,
+          totalStaff: summary.totalStaff,
+          totalCourses: summary.totalCourses,
+          activeEnrollments: summary.activeEnrollments,
+          validatedGrades: summary.validatedGrades,
+          attendanceRate: summary.attendance.rate ?? 0,
+          feesOutstanding: summary.fees.outstanding ?? 0,
+          recentPayments: payments
+            .filter((p) => p.status === 'active')
+            .slice(0, 8)
+            .map((p) => ({
+              id: p.id,
+              studentNumber: p.student?.studentId ?? `#${p.studentId}`,
+              name: p.student ? `${p.student.firstName} ${p.student.lastName}` : '—',
+              amount: Number(p.amount),
+              paymentDate: p.paymentDate,
+            })),
+        });
+      })
+      .catch(() => setStats(null));
   }, []);
   if (!stats) return <Loading text="Loading dashboard..." />;
   return (
@@ -110,7 +135,7 @@ function AdminDashboard() {
         <StatCard label="Staff" value={stats.totalStaff} />
         <StatCard label="Courses" value={stats.totalCourses} />
         <StatCard label="Active enrollments" value={stats.activeEnrollments} />
-        <StatCard label="Fees outstanding" value={money(stats.feeBalance)} />
+        <StatCard label="Fees outstanding" value={money(stats.feesOutstanding)} />
         <StatCard label="Attendance rate" value={formatPercent(stats.attendanceRate)} />
       </div>
       <Card title="Recent payments">

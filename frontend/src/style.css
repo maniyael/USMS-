@@ -594,6 +594,21 @@ h3 {
   border: 1px solid #bfdbfe;
 }
 
+/* Error boundary */
+.error-box {
+  padding: 24px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #7f1d1d;
+  max-width: 480px;
+}
+
+.error-box h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
 /* Modal */
 .modal-backdrop {
   position: fixed;

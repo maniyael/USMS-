@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth';
-import { Spinner } from './components/ui';
+import { ErrorBoundary, Spinner } from './components/ui';
 import Academics from './pages/Academics';
 import Announcements from './pages/Announcements';
 import Attendance from './pages/Attendance';
@@ -64,7 +64,9 @@ function Layout() {
         </div>
       </aside>
       <main className="content">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );
