@@ -64,7 +64,7 @@ export default function App(): ReactNode {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<ChangePassword />} />
-      <Route path="/" element={<Protected />} />
+      <Route path="*" element={<Protected />} />
     </Routes>
   );
 }
